@@ -11,9 +11,9 @@ st.title("🏗️ 株式会社ホカマ 建築部施工管理ポータルサイ�
 st.caption("各施工管理アプリへ、下のボタンからアクセスできます。")
 
 
-def app_link(label: str) -> None:
-    """公開後に各アプリの URL へ書き換えてください。"""
-    st.link_button(label, "https://example.com", use_container_width=True)
+def app_link(label: str, url: str = "https://example.com") -> None:
+    """公開済みの各アプリURLを指定してください。"""
+    st.link_button(label, url, use_container_width=True)
 
 
 st.divider()
@@ -30,9 +30,9 @@ app_link("📄 各種検査書類")
 
 st.divider()
 st.header("📐 測量・計算")
-app_link("📏 測量計算ツール")
+app_link("📏 測量計算ツール", "https://hokama-ts-sokuryou.streamlit.app/")
 app_link("🧮 数量・出来形計算")
 app_link("📊 材料・数量集計")
 
 st.divider()
-st.caption("※ 各ボタンのURL（https://example.com）は、公開済みアプリのURLへ書き換えてご利用ください。")
+st.caption("※ 各ボタンのURLは、公開済みアプリのURLへ書き換えてご利用ください。")
