@@ -81,7 +81,7 @@ app_link("📷 写真管理・検査記録")
 app_link("📄 各種検査書類", "https://hokama-self-inspection.streamlit.app/")
 
 st.divider()
-st.header("📐 測量・計算")
+st.header("🛠️ 施工管理支援ツール")
 app_link("📏 測量計算ツール", "https://hokama-ts-sokuryou.streamlit.app/")
 app_link("🧮 数量・出来形計算")
 app_link("📊 材料・数量集計")
