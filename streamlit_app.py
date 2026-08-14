@@ -5,10 +5,62 @@ st.set_page_config(
     page_title="株式会社ホカマ 建築部施工管理ポータルサイト",
     page_icon="🏗️",
     layout="centered",
+    initial_sidebar_state="collapsed",
 )
 
-st.title("🏗️ 株式会社ホカマ 建築部施工管理ポータルサイト")
-st.caption("各施工管理アプリへ、下のボタンからアクセスできます。")
+st.markdown(
+    """
+    <style>
+        .block-container {
+            max-width: 680px;
+            padding: 1.25rem 1rem 2.5rem;
+        }
+        h1 {
+            font-size: clamp(1.65rem, 7vw, 2.25rem) !important;
+            line-height: 1.32 !important;
+            margin-bottom: 0.35rem !important;
+        }
+        h2 {
+            font-size: 1.25rem !important;
+            margin-top: 0.25rem !important;
+        }
+        div[data-testid="stLinkButton"] > a {
+            min-height: 4.25rem;
+            padding: 1rem 1.1rem;
+            border-radius: 0.85rem;
+            font-size: 1.08rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            box-shadow: 0 2px 7px rgba(0, 0, 0, 0.12);
+        }
+        div[data-testid="stLinkButton"] {
+            margin: 0.65rem 0;
+        }
+        hr {
+            margin: 1.65rem 0 1rem;
+        }
+        [data-testid="stCaptionContainer"] {
+            font-size: 0.93rem;
+        }
+        @media (max-width: 480px) {
+            .block-container {
+                padding: 1rem 0.85rem 2rem;
+            }
+            div[data-testid="stLinkButton"] > a {
+                min-height: 4.6rem;
+                font-size: 1.1rem;
+                padding: 1rem;
+            }
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.title("🏗️ 株式会社ホカマ\n建築部施工管理ポータルサイト")
+st.caption("現場で使うアプリを、下の大きなボタンから開けます。")
 
 
 def app_link(label: str, url: str = "https://example.com") -> None:
