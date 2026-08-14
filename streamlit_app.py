@@ -26,7 +26,7 @@ st.divider()
 st.header("🔍 品質・検査")
 app_link("✅ 品質管理チェックリスト")
 app_link("📷 写真管理・検査記録")
-app_link("📄 各種検査書類")
+app_link("📄 各種検査書類", "https://hokama-self-inspection.streamlit.app/")
 
 st.divider()
 st.header("📐 測量・計算")
