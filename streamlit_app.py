@@ -76,7 +76,7 @@ app_link("📝 日報・作業報告")
 
 st.divider()
 st.header("🔍 品質・検査")
-app_link("📚 公共建築工事標準仕様書検索")
+app_link("📚 公共建築工事標準仕様書検索", "https://hokama-spec-search.streamlit.app/")
 app_link("📷 写真管理・検査記録")
 app_link("📄 各種検査書類", "https://hokama-self-inspection.streamlit.app/")
 
