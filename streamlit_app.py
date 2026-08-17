@@ -72,7 +72,7 @@ st.divider()
 st.header("💬 コミュニケーション")
 app_link("📢 お知らせ・連絡掲示板")
 app_link("📅 工程・予定共有")
-app_link("📝 日報・作業報告")
+app_link("📝 日報・作業報告", "https://hokama-60sec-daily-report.streamlit.app/")
 app_link("📌 未対応事項", "https://hokama-issue-management.streamlit.app/")
 
 st.divider()
