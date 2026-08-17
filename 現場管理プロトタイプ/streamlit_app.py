@@ -1,13 +1,13 @@
 import streamlit as st
 from datetime import date, timedelta
 
-st.set_page_config(page_title="現場管理プロトタイプ", page_icon="🏗️", layout="centered")
+st.set_page_config(page_title="施工確認アプリ", page_icon="🏗️", layout="centered")
 st.markdown("""<style>.block-container{max-width:720px;padding:1rem 1rem 4rem}div.stButton>button,div[data-testid='stFormSubmitButton'] button{min-height:52px;font-weight:700}</style>""",unsafe_allow_html=True)
 for key in ("rc","cast","plan","correct"):
     st.session_state.setdefault(key,[])
 
-st.title("🏗️ 現場管理プロトタイプ")
-st.caption("RC施工チェック・打設管理・3日先確認・是正事項分析を、現場の流れで試すための試作版です。")
+st.title("🏗️ 施工確認アプリ")
+st.caption("RC施工チェック・打設管理・3日先確認・是正事項分析を、現場の流れで確認する試作版です。")
 site=st.text_input("工事名",placeholder="例：○○建設工事")
 tab1,tab2,tab3,tab4=st.tabs(["🧱 RC施工","🚚 打設","📅 3日先","📊 是正分析"])
 
