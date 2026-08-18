@@ -2,8 +2,8 @@ name: 施工管理データの定期バックアップ
 
 on:
   schedule:
-    # UTC 18:00 = 日本時間 03:00。各月の3日ごとに実行します。
-    - cron: "0 18 */3 * *"
+    # UTC 18:00 = 日本時間 03:00。処理側で前回成功から72時間を判定します。
+    - cron: "0 18 * * *"
   workflow_dispatch:
 
 permissions:
@@ -24,8 +24,10 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           BACKUP_OUTPUT_DIR: backup-output
+          FORCE_BACKUP: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
         run: python backup_manager/automated_backup.py
       - name: ZIPを90日間保管
+        if: hashFiles('backup-output/*.zip') != ''
         uses: actions/upload-artifact@v4
         with:
           name: hokama-construction-backup-${{ github.run_id }}
