@@ -7,7 +7,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 import streamlit as st
 
-st.set_page_config(page_title="60秒日報", page_icon="📝", layout="centered")
+st.set_page_config(page_title="建築工事日報", page_icon="📝", layout="centered")
 SUPABASE_URL = "https://schttjeinzdhjemgtdvi.supabase.co"
 SUPABASE_KEY = "sb_publishable_7HgyHI9HKDD5lvyPnX3tSA_ptePV39_"
 DEFAULT_LABOR_TYPES = ["特殊作業員", "普通作業員", "軽作業員", "とび工", "鉄筋工", "鉄骨工", "溶接工", "型枠工", "大工", "左官工", "はつり工", "ガラス工", "建具工", "運転（特殊）", "建築ブロック", "タイル工", "内装工", "塗装工", "防水板金工", "屋根葺工", "鳶工", "ブロック工", "運転（一般）", "電工", "設備機械工", "ダクト工", "保温工", "配管工", "造園工", "削岩工", "石工"]
@@ -36,7 +36,7 @@ div[data-testid="stFormSubmitButton"] button,div[data-testid="stButton"] button{
 div[data-testid="stMetric"]{background:#fff;border:1px solid #d7e2eb;border-radius:12px;padding:.65rem}div[data-testid="stDataFrame"]{background:#fff;border:1px solid #d7e2eb;border-radius:12px;overflow:hidden}
 @media(max-width:480px){.block-container{padding:1rem .85rem 5rem}div[data-testid="stFormSubmitButton"] button,div[data-testid="stButton"] button{min-height:60px;font-size:1.08rem}}
 </style>""", unsafe_allow_html=True)
-st.title("📝 60秒日報")
+st.title("📝 建築工事日報")
 st.markdown("<p class='lead'>工事ごとに、職種別の出面と施工内容を全員で共有・累計する日報です。</p>", unsafe_allow_html=True)
 st.info("共同利用版：URLを知る利用者は、すべての工事の日報・職種設定を閲覧、追加、編集、削除できます。")
 
@@ -63,6 +63,29 @@ project_names = [project["name"] for project in projects]
 selected_project_name = st.selectbox("🏗️ 工事名を切り替える", project_names)
 project = next(item for item in projects if item["name"] == selected_project_name)
 labor_types = project.get("labor_types") or DEFAULT_LABOR_TYPES
+with st.expander("🏗️ 選択中の工事を編集・削除", expanded=False):
+    with st.form(f"edit_project_{project['id']}"):
+        edited_project_name = st.text_input("工事名", value=project["name"])
+        save_project_name = st.form_submit_button("💾 工事名を保存", use_container_width=True)
+    if save_project_name:
+        if not edited_project_name.strip(): st.error("工事名を入力してください。")
+        else:
+            try:
+                api("daily_report_projects", "PATCH", {"id":f"eq.{project['id']}"}, {"name":edited_project_name.strip()})
+                st.success("工事名を変更しました。"); st.rerun()
+            except RuntimeError as error: st.error(str(error))
+    with st.form(f"delete_project_{project['id']}"):
+        confirm_delete_project = st.checkbox(f"「{project['name']}」の日報・職種設定をすべて削除する")
+        delete_project = st.form_submit_button("🗑️ この工事を削除", use_container_width=True)
+    if delete_project:
+        if not confirm_delete_project: st.error("削除内容を確認するチェックを入れてください。")
+        elif len(projects) <= 1: st.error("最後の1件は削除できません。先に別の工事を追加してください。")
+        else:
+            try:
+                api("daily_reports", "DELETE", {"project_id":f"eq.{project['id']}"}, prefer="return=minimal")
+                api("daily_report_projects", "DELETE", {"id":f"eq.{project['id']}"}, prefer="return=minimal")
+                st.success("工事と保存済み日報を削除しました。"); st.rerun()
+            except RuntimeError as error: st.error(str(error))
 with st.expander("職種の追加・削除", expanded=False):
     st.caption("この変更は、選択中の工事だけに反映されます。")
     with st.form(f"labor_types_{project['id']}"):
