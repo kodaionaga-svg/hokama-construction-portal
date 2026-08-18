@@ -1,4 +1,4 @@
-"""工事日報（全員共通・工事別クラウド保存版）"""
+"""60秒日報（全員共通・工事別クラウド保存版）"""
 from __future__ import annotations
 import json
 from datetime import date, time
@@ -7,7 +7,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 import streamlit as st
 
-st.set_page_config(page_title="工事日報", page_icon="📝", layout="centered")
+st.set_page_config(page_title="60秒日報", page_icon="📝", layout="centered")
 SUPABASE_URL = "https://schttjeinzdhjemgtdvi.supabase.co"
 SUPABASE_KEY = "sb_publishable_7HgyHI9HKDD5lvyPnX3tSA_ptePV39_"
 DEFAULT_LABOR_TYPES = ["特殊作業員", "普通作業員", "軽作業員", "とび工", "鉄筋工", "鉄骨工", "溶接工", "型枠工", "大工", "左官工", "はつり工", "ガラス工", "建具工", "運転（特殊）", "建築ブロック", "タイル工", "内装工", "塗装工", "防水板金工", "屋根葺工", "鳶工", "ブロック工", "運転（一般）", "電工", "設備機械工", "ダクト工", "保温工", "配管工", "造園工", "削岩工", "石工"]
@@ -29,8 +29,14 @@ def api(table, method="GET", params=None, body=None, prefer="return=representati
 def labor_total(entries): return sum(float(entry.get("count") or 0) for entry in entries)
 def display_number(value): return str(int(value)) if float(value).is_integer() else f"{value:.1f}"
 
-st.markdown("""<style>.block-container{max-width:720px;padding:1rem 1rem 5rem}h1{font-size:1.7rem}.lead{color:#5d6b78}div[data-testid="stForm"]{border:1px solid #d8e0e8;border-radius:16px;padding:1rem;background:#fff}div[data-testid="stFormSubmitButton"] button,div[data-testid="stButton"] button{min-height:52px;font-size:1.02rem;font-weight:700}div[data-testid="stMetric"]{background:#f4f8fb;border-radius:12px;padding:.45rem}</style>""", unsafe_allow_html=True)
-st.title("📝 工事日報")
+st.markdown("""<style>
+.stApp{background:#f4f7fa;color:#1e293b}.block-container{max-width:720px;padding:1.25rem 1rem 5rem}h1{color:#123757!important;font-size:clamp(1.65rem,7vw,2.2rem)!important;line-height:1.3!important}.lead{color:#64748b}
+div[data-testid="stForm"],div[data-testid="stExpander"]{border:1px solid #d7e2eb;border-radius:14px;padding:1rem;background:#fff;box-shadow:0 2px 7px #1237570a}
+div[data-testid="stFormSubmitButton"] button,div[data-testid="stButton"] button{min-height:56px;border-radius:10px;background:#1d6398;color:#fff;font-size:1.05rem;font-weight:700}
+div[data-testid="stMetric"]{background:#fff;border:1px solid #d7e2eb;border-radius:12px;padding:.65rem}div[data-testid="stDataFrame"]{background:#fff;border:1px solid #d7e2eb;border-radius:12px;overflow:hidden}
+@media(max-width:480px){.block-container{padding:1rem .85rem 5rem}div[data-testid="stFormSubmitButton"] button,div[data-testid="stButton"] button{min-height:60px;font-size:1.08rem}}
+</style>""", unsafe_allow_html=True)
+st.title("📝 60秒日報")
 st.markdown("<p class='lead'>工事ごとに、職種別の出面と施工内容を全員で共有・累計する日報です。</p>", unsafe_allow_html=True)
 st.info("共同利用版：URLを知る利用者は、すべての工事の日報・職種設定を閲覧、追加、編集、削除できます。")
 
