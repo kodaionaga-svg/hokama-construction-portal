@@ -26,12 +26,4 @@ jobs:
           BACKUP_OUTPUT_DIR: backup-output
           FORCE_BACKUP: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
         run: python backup_manager/automated_backup.py
-      - name: ZIPを90日間保管
-        if: hashFiles('backup-output/*.zip') != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: hokama-construction-backup-${{ github.run_id }}
-          path: backup-output/*.zip
-          retention-days: 90
-          if-no-files-found: error
 
