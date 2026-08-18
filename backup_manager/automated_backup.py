@@ -23,6 +23,7 @@ TABLES = [
     "patrol_sites", "patrol_check_items", "patrol_checks", "patrol_findings", "patrol_report_settings",
     "architectural_projects", "architectural_issues", "architectural_photos",
 ]
+MAX_PART_BYTES = 40 * 1024 * 1024
 
 
 def fetch_table(base_url: str, service_key: str, table: str) -> list[dict]:
@@ -168,14 +169,31 @@ def main() -> None:
             archive.writestr(f"data/{table}.csv", csv_bytes(rows))
         for backup_path, contents in storage_files:
             archive.writestr(backup_path, contents)
+    zip_bytes = output_path.read_bytes()
     uploaded_name = f"automatic/{output_path.name}"
+    part_names: list[str] = []
+    for number, offset in enumerate(range(0, len(zip_bytes), MAX_PART_BYTES), start=1):
+        part_name = f"{uploaded_name}.part{number:03d}"
+        part_names.append(part_name)
+        storage_request(
+            base_url,
+            service_key,
+            f"object/construction-backups/{urllib.parse.quote(part_name, safe='/')}",
+            data=zip_bytes[offset: offset + MAX_PART_BYTES],
+            method="POST",
+            content_type="application/octet-stream",
+            extra_headers={"x-upsert": "true"},
+        )
     storage_request(
         base_url,
         service_key,
-        f"object/construction-backups/{urllib.parse.quote(uploaded_name, safe='/')}",
-        data=output_path.read_bytes(),
+        f"object/construction-backups/{urllib.parse.quote(uploaded_name + '.manifest.json', safe='/')}",
+        data=json.dumps(
+            {"original_file": output_path.name, "parts": part_names, "restore": "Download all parts in number order and concatenate them to recreate the ZIP."},
+            ensure_ascii=False,
+        ).encode("utf-8"),
         method="POST",
-        content_type="application/zip",
+        content_type="application/json",
         extra_headers={"x-upsert": "true"},
     )
     rest_request(
@@ -184,7 +202,7 @@ def main() -> None:
         "automated_backup_runs",
         method="POST",
         body={
-            "file_name": uploaded_name,
+            "file_name": ", ".join(part_names),
             "table_count": len(results),
             "storage_file_count": len(storage_files),
         },
