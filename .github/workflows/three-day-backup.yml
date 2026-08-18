@@ -1,0 +1,35 @@
+name: 施工管理データの定期バックアップ
+
+on:
+  schedule:
+    # UTC 18:00 = 日本時間 03:00。各月の3日ごとに実行します。
+    - cron: "0 18 */3 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  create-backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: リポジトリを取得
+        uses: actions/checkout@v4
+      - name: Pythonを準備
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: データバックアップを作成
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BACKUP_OUTPUT_DIR: backup-output
+        run: python backup_manager/automated_backup.py
+      - name: ZIPを90日間保管
+        uses: actions/upload-artifact@v4
+        with:
+          name: hokama-construction-backup-${{ github.run_id }}
+          path: backup-output/*.zip
+          retention-days: 90
+          if-no-files-found: error
+
