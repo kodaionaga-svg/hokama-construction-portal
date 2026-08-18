@@ -11,18 +11,18 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-        .block-container {
+        .stApp { background: #f4f7fa; }\n        header { visibility: hidden; height: 0; }\n        .block-container {
             max-width: 680px;
-            padding: 1.25rem 1rem 2.5rem;
+            padding: 1.5rem 1rem 3rem;\n            background: #ffffff;\n            border: 1px solid #d7e2eb;\n            border-radius: 1.1rem;\n            box-shadow: 0 3px 14px rgba(18, 55, 87, 0.10);\n            margin-top: 1rem;
         }
         h1 {
             font-size: clamp(1.65rem, 7vw, 2.25rem) !important;
             line-height: 1.32 !important;
-            margin-bottom: 0.35rem !important;
+            margin-bottom: 0.5rem !important;\n            color: #123757 !important;
         }
         h2 {
             font-size: 1.25rem !important;
-            margin-top: 0.25rem !important;
+            margin-top: 1.35rem !important;\n            padding: 0.7rem 0.85rem;\n            background: #e7f1f8;\n            border-left: 5px solid #1d6398;\n            border-radius: 0.55rem;\n            color: #123757 !important;
         }
         div[data-testid="stLinkButton"] > a {
             min-height: 4.25rem;
@@ -33,10 +33,10 @@ st.markdown(
             display: flex;
             align-items: center;
             justify-content: flex-start;
-            box-shadow: 0 2px 7px rgba(0, 0, 0, 0.12);
+            box-shadow: 0 3px 9px rgba(18, 55, 87, 0.16);\n            background: #1d6398 !important;\n            color: #ffffff !important;\n            border: 0 !important;
         }
         div[data-testid="stLinkButton"] {
-            margin: 0.65rem 0;
+            margin: 0.75rem 0;
         }
         hr {
             margin: 1.65rem 0 1rem;
