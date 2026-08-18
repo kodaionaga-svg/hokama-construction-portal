@@ -16,19 +16,19 @@ st.markdown(
             padding: 1.5rem 1rem 3rem;\n            background: #ffffff;\n            border: 1px solid #d7e2eb;\n            border-radius: 1.1rem;\n            box-shadow: 0 3px 14px rgba(18, 55, 87, 0.10);\n            margin-top: 1rem;
         }
         h1 {
-            font-size: clamp(1.65rem, 7vw, 2.25rem) !important;
+            font-size: clamp(2rem, 9vw, 2.8rem) !important;
             line-height: 1.32 !important;
             margin-bottom: 0.5rem !important;\n            color: #123757 !important;
         }
         h2 {
-            font-size: 1.25rem !important;
+            font-size: 1.5rem !important;
             margin-top: 1.35rem !important;\n            padding: 0.7rem 0.85rem;\n            background: #e7f1f8;\n            border-left: 5px solid #1d6398;\n            border-radius: 0.55rem;\n            color: #123757 !important;
         }
         div[data-testid="stLinkButton"] > a {
-            min-height: 4.25rem;
+            min-height: 5.25rem;
             padding: 1rem 1.1rem;
             border-radius: 0.85rem;
-            font-size: 1.08rem;
+            font-size: 1.32rem;
             font-weight: 700;
             display: flex;
             align-items: center;
@@ -42,15 +42,15 @@ st.markdown(
             margin: 1.65rem 0 1rem;
         }
         [data-testid="stCaptionContainer"] {
-            font-size: 0.93rem;
+            font-size: 1.05rem;
         }
         @media (max-width: 480px) {
             .block-container {
                 padding: 1rem 0.85rem 2rem;
             }
             div[data-testid="stLinkButton"] > a {
-                min-height: 4.6rem;
-                font-size: 1.1rem;
+                min-height: 5.5rem;
+                font-size: 1.35rem;
                 padding: 1rem;
             }
         }
