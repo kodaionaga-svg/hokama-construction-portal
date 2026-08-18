@@ -34,6 +34,38 @@ def fetch_table(base_url: str, service_key: str, table: str) -> list[dict]:
         return json.loads(response.read().decode("utf-8"))
 
 
+def rest_request(base_url: str, service_key: str, table: str, *, method: str = "GET", body: dict | None = None) -> list[dict]:
+    url = f"{base_url.rstrip('/')}/rest/v1/{urllib.parse.quote(table)}"
+    data = json.dumps(body).encode("utf-8") if body is not None else None
+    request = urllib.request.Request(
+        url,
+        data=data,
+        method=method,
+        headers={
+            "apikey": service_key,
+            "Authorization": f"Bearer {service_key}",
+            "Content-Type": "application/json",
+            "Prefer": "return=representation",
+        },
+    )
+    with urllib.request.urlopen(request, timeout=60) as response:
+        payload = response.read().decode("utf-8")
+        return json.loads(payload) if payload else []
+
+
+def backup_is_due(base_url: str, service_key: str) -> bool:
+    if os.environ.get("FORCE_BACKUP", "").lower() == "true":
+        return True
+    url = f"{base_url.rstrip('/')}/rest/v1/automated_backup_runs?select=created_at&order=created_at.desc&limit=1"
+    request = urllib.request.Request(url, headers={"apikey": service_key, "Authorization": f"Bearer {service_key}"})
+    with urllib.request.urlopen(request, timeout=60) as response:
+        rows = json.loads(response.read().decode("utf-8"))
+    if not rows:
+        return True
+    previous = datetime.fromisoformat(rows[0]["created_at"].replace("Z", "+00:00"))
+    return (datetime.now(timezone.utc) - previous).total_seconds() >= 72 * 60 * 60
+
+
 def storage_request(base_url: str, service_key: str, path: str, *, data: bytes | None = None) -> bytes:
     request = urllib.request.Request(
         f"{base_url.rstrip('/')}/storage/v1/{path.lstrip('/')}",
@@ -76,6 +108,9 @@ def csv_bytes(rows: list[dict]) -> bytes:
 def main() -> None:
     base_url = os.environ["SUPABASE_URL"]
     service_key = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
+    if not backup_is_due(base_url, service_key):
+        print("前回の成功バックアップから72時間未満のため、今回は実行しません。")
+        return
     out_dir = Path(os.environ.get("BACKUP_OUTPUT_DIR", "backup-output"))
     out_dir.mkdir(parents=True, exist_ok=True)
     created = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -114,6 +149,17 @@ def main() -> None:
             archive.writestr(f"data/{table}.csv", csv_bytes(rows))
         for backup_path, contents in storage_files:
             archive.writestr(backup_path, contents)
+    rest_request(
+        base_url,
+        service_key,
+        "automated_backup_runs",
+        method="POST",
+        body={
+            "file_name": output_path.name,
+            "table_count": len(results),
+            "storage_file_count": len(storage_files),
+        },
+    )
     print(json.dumps({"file": str(output_path), "tables": manifest["tables"], "errors": errors}, ensure_ascii=False))
 
 
