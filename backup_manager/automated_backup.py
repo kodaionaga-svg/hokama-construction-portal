@@ -66,15 +66,27 @@ def backup_is_due(base_url: str, service_key: str) -> bool:
     return (datetime.now(timezone.utc) - previous).total_seconds() >= 72 * 60 * 60
 
 
-def storage_request(base_url: str, service_key: str, path: str, *, data: bytes | None = None) -> bytes:
+def storage_request(
+    base_url: str,
+    service_key: str,
+    path: str,
+    *,
+    data: bytes | None = None,
+    method: str | None = None,
+    content_type: str = "application/json",
+    extra_headers: dict[str, str] | None = None,
+) -> bytes:
+    headers = {
+        "apikey": service_key,
+        "Authorization": f"Bearer {service_key}",
+        "Content-Type": content_type,
+    }
+    headers.update(extra_headers or {})
     request = urllib.request.Request(
         f"{base_url.rstrip('/')}/storage/v1/{path.lstrip('/')}",
         data=data,
-        headers={
-            "apikey": service_key,
-            "Authorization": f"Bearer {service_key}",
-            "Content-Type": "application/json",
-        },
+        method=method,
+        headers=headers,
     )
     with urllib.request.urlopen(request, timeout=120) as response:
         return response.read()
@@ -129,6 +141,8 @@ def main() -> None:
         buckets = json.loads(storage_request(base_url, service_key, "bucket"))
         for bucket in buckets:
             bucket_name = bucket["name"]
+            if bucket_name == "construction-backups":
+                continue
             for file_name in list_storage_files(base_url, service_key, bucket_name):
                 encoded = "/".join(urllib.parse.quote(part) for part in file_name.split("/"))
                 storage_files.append((f"storage/{bucket_name}/{file_name}", storage_request(base_url, service_key, f"object/{bucket_name}/{encoded}")))
@@ -149,13 +163,23 @@ def main() -> None:
             archive.writestr(f"data/{table}.csv", csv_bytes(rows))
         for backup_path, contents in storage_files:
             archive.writestr(backup_path, contents)
+    uploaded_name = f"automatic/{output_path.name}"
+    storage_request(
+        base_url,
+        service_key,
+        f"object/construction-backups/{urllib.parse.quote(uploaded_name, safe='/')}",
+        data=output_path.read_bytes(),
+        method="POST",
+        content_type="application/zip",
+        extra_headers={"x-upsert": "true"},
+    )
     rest_request(
         base_url,
         service_key,
         "automated_backup_runs",
         method="POST",
         body={
-            "file_name": output_path.name,
+            "file_name": uploaded_name,
             "table_count": len(results),
             "storage_file_count": len(storage_files),
         },
