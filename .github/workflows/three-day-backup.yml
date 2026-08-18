@@ -21,7 +21,8 @@ jobs:
           python-version: "3.12"
       - name: データバックアップを作成
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          # Project URL is public configuration; the sensitive service key stays in Secrets.
+          SUPABASE_URL: https://schttjeinzdhjemgtdvi.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           BACKUP_OUTPUT_DIR: backup-output
           FORCE_BACKUP: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
