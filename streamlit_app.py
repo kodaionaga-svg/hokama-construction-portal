@@ -71,8 +71,8 @@ def app_link(label: str, url: str = "https://example.com") -> None:
 st.divider()
 st.header("💬 コミュニケーション")
 app_link("⚠️ KY・安全管理", "https://hokama-ky-safety.streamlit.app/")
-app_link("📢 お知らせ・連絡掲示板")
-app_link("📅 工程・予定共有")
+app_link("📢 お知らせ・連絡掲示板", "https://kodaionaga-svg.github.io/hokama-safety-patrol-app/notice-board/")
+app_link("📅 工程・予定共有", "https://kodaionaga-svg.github.io/hokama-safety-patrol-app/schedule-share/")
 app_link("📝 工事日報・作業報告", "https://hokama-60sec-daily-report.streamlit.app/")
 app_link("📌 未対応事項", "https://hokama-issue-management.streamlit.app/")
 
