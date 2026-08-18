@@ -7,6 +7,7 @@ import io
 import json
 import os
 import urllib.parse
+import urllib.error
 import urllib.request
 import zipfile
 from datetime import datetime, timezone
@@ -88,8 +89,12 @@ def storage_request(
         method=method,
         headers=headers,
     )
-    with urllib.request.urlopen(request, timeout=120) as response:
-        return response.read()
+    try:
+        with urllib.request.urlopen(request, timeout=120) as response:
+            return response.read()
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Storage API error {exc.code}: {detail}") from exc
 
 
 def list_storage_files(base_url: str, service_key: str, bucket: str, prefix: str = "") -> list[str]:
