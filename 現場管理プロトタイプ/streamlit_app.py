@@ -132,11 +132,11 @@ with t4:
     if not options: st.info("先に「打設前」を登録してください。")
     else:
         with st.form("curing",clear_on_submit=True):
-            pick=st.selectbox("対象打設",list(options),key="curing_pick"); a,b=st.columns(2); begin=a.datetime_input("養生開始",datetime.now()); finish=b.datetime_input("養生終了予定",datetime.now())
+            pick=st.selectbox("対象打設",list(options),key="curing_pick"); a,b=st.columns(2); begin_day=a.date_input("養生開始日",date.today()); begin_time=b.time_input("養生開始時刻",datetime.now().time().replace(second=0,microsecond=0)); a,b=st.columns(2); finish_day=a.date_input("養生終了予定日",date.today()); finish_time=b.time_input("養生終了予定時刻",datetime.now().time().replace(second=0,microsecond=0))
             a,b,c=st.columns(3); method=a.selectbox("養生方法",["散水","湿潤シート","被膜養生","保温養生","その他"]); temp=b.number_input("養生温度 ℃",0.0,step=.1); specimen=c.text_input("供試体番号")
             a,b=st.columns(2); test=a.date_input("強度試験予定日",date.today()); strength=b.number_input("圧縮強度 N/mm²",0.0,step=.1); judge=st.selectbox("強度判定",["未試験","適合","要確認","不適合"]); memo=st.text_area("養生・試験メモ"); save=st.form_submit_button("養生・強度記録を保存",use_container_width=True)
         if save:
-            p=options[pick]; save("curing", {"pour_id":p["id"],"date":p["date"],"area":p["area"],"養生開始":str(begin),"養生終了予定":str(finish),"方法":method,"養生温度℃":temp,"供試体":specimen,"試験予定":str(test),"圧縮強度N/mm2":strength,"判定":judge,"メモ":memo,"保存":now()}); st.success("クラウドへ保存しました。"); st.rerun()
+            p=options[pick]; save("curing", {"pour_id":p["id"],"date":p["date"],"area":p["area"],"養生開始":f"{begin_day} {begin_time}","養生終了予定":f"{finish_day} {finish_time}","方法":method,"養生温度℃":temp,"供試体":specimen,"試験予定":str(test),"圧縮強度N/mm2":strength,"判定":judge,"メモ":memo,"保存":now()}); st.success("クラウドへ保存しました。"); st.rerun()
     st.dataframe([clean(x) for x in records["curing"][::-1]],use_container_width=True,hide_index=True)
 
 with t5:
