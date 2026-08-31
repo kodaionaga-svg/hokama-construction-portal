@@ -1,11 +1,13 @@
 """60秒日報（全員共通・工事別クラウド保存版）"""
 from __future__ import annotations
 import json
+from io import BytesIO
 from datetime import date, time
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 import streamlit as st
+import xlsxwriter
 
 st.set_page_config(page_title="建築工事日報", page_icon="📝", layout="centered")
 SUPABASE_URL = "https://schttjeinzdhjemgtdvi.supabase.co"
@@ -29,12 +31,86 @@ def api(table, method="GET", params=None, body=None, prefer="return=representati
 def labor_total(entries): return sum(float(entry.get("count") or 0) for entry in entries)
 def display_number(value): return str(int(value)) if float(value).is_integer() else f"{value:.1f}"
 
+def report_xlsx(project_name, report):
+    """画面で選択している1日分の日報を、そのまま提出用のExcel帳票にする。"""
+    output = BytesIO()
+    with xlsxwriter.Workbook(output, {"in_memory": True}) as workbook:
+        sheet = workbook.add_worksheet("工事日報")
+        sheet.hide_gridlines(2)
+        sheet.set_column("A:A", 18)
+        sheet.set_column("B:B", 16)
+        sheet.set_column("C:C", 12)
+        sheet.set_column("D:D", 46)
+        sheet.set_column("E:E", 18)
+
+        navy = "#123757"
+        blue = "#1D6398"
+        pale_blue = "#E7F1F8"
+        border = "#D7E2EB"
+        title = workbook.add_format({"bold": True, "font_size": 18, "font_color": "#FFFFFF", "bg_color": navy, "align": "center", "valign": "vcenter"})
+        label = workbook.add_format({"bold": True, "font_color": navy, "bg_color": pale_blue, "border": 1, "border_color": border, "valign": "vcenter"})
+        value = workbook.add_format({"border": 1, "border_color": border, "valign": "vcenter"})
+        value_center = workbook.add_format({"border": 1, "border_color": border, "align": "center", "valign": "vcenter"})
+        section = workbook.add_format({"bold": True, "font_color": "#FFFFFF", "bg_color": blue, "align": "left", "valign": "vcenter"})
+        table_header = workbook.add_format({"bold": True, "font_color": navy, "bg_color": pale_blue, "border": 1, "border_color": border, "align": "center", "valign": "vcenter"})
+        table_text = workbook.add_format({"border": 1, "border_color": border, "valign": "top", "text_wrap": True})
+        table_number = workbook.add_format({"border": 1, "border_color": border, "align": "right", "valign": "top", "num_format": "0.0"})
+        note_label = workbook.add_format({"bold": True, "font_color": navy, "bg_color": pale_blue, "border": 1, "border_color": border, "valign": "top"})
+        note_value = workbook.add_format({"border": 1, "border_color": border, "valign": "top", "text_wrap": True})
+        total_label = workbook.add_format({"bold": True, "font_color": navy, "bg_color": "#DDEBF7", "border": 1, "border_color": border, "align": "right"})
+        total_value = workbook.add_format({"bold": True, "font_color": navy, "bg_color": "#DDEBF7", "border": 1, "border_color": border, "align": "right", "num_format": "0.0"})
+
+        sheet.merge_range("A1:E1", "建築工事日報", title)
+        sheet.set_row(0, 31)
+        sheet.write("A3", "工事名", label)
+        sheet.merge_range("B3:E3", project_name, value)
+        sheet.write("A4", "日付", label)
+        sheet.write("B4", report["report_date"], value_center)
+        sheet.write("C4", "代理人名", label)
+        sheet.merge_range("D4:E4", report.get("agent_name", ""), value)
+        sheet.write("A5", "天候", label)
+        sheet.write("B5", report.get("weather", ""), value_center)
+        sheet.write("C5", "作業時間", label)
+        sheet.merge_range("D5:E5", f"{(report.get('work_start') or '')[:5]} ～ {(report.get('work_end') or '')[:5]}", value_center)
+
+        sheet.merge_range("A7:E7", "職種別の出面・施工内容", section)
+        sheet.write_row("A8", ["No.", "職種", "出面（人）", "施工内容", "備考"], table_header)
+        entries = report.get("labor_entries") or []
+        start_row = 8
+        for index, entry in enumerate(entries, start=1):
+            row = start_row + index
+            sheet.write_number(row, 0, index, table_text)
+            sheet.write(row, 1, entry.get("labor_type", ""), table_text)
+            sheet.write_number(row, 2, float(entry.get("count") or 0), table_number)
+            sheet.write(row, 3, entry.get("content", ""), table_text)
+            sheet.write(row, 4, "", table_text)
+            sheet.set_row(row, 34)
+        total_row = start_row + len(entries) + 1
+        sheet.merge_range(total_row, 0, total_row, 1, "本日合計", total_label)
+        sheet.write_formula(total_row, 2, f"=SUM(C10:C{total_row})", total_value, labor_total(entries))
+        sheet.merge_range(total_row, 3, total_row, 4, "", total_value)
+
+        concern_row = total_row + 3
+        sheet.merge_range(concern_row, 0, concern_row, 4, "気になったこと・違和感", section)
+        sheet.write(concern_row + 1, 0, "記入内容", note_label)
+        sheet.merge_range(concern_row + 1, 1, concern_row + 2, 4, report.get("concern", ""), note_value)
+        sheet.set_row(concern_row + 1, 34)
+        sheet.merge_range(concern_row + 4, 0, concern_row + 4, 4, "明日の予定・引継ぎ", section)
+        sheet.write(concern_row + 5, 0, "記入内容", note_label)
+        sheet.merge_range(concern_row + 5, 1, concern_row + 6, 4, report.get("tomorrow", ""), note_value)
+        sheet.set_row(concern_row + 5, 34)
+        sheet.set_landscape()
+        sheet.fit_to_pages(1, 1)
+        sheet.set_margins(left=0.3, right=0.3, top=0.45, bottom=0.45)
+        sheet.set_footer("&RPage &P / &N")
+    return output.getvalue()
+
 st.markdown("""<style>
 .stApp{background:#f4f7fa;color:#1e293b}.block-container{max-width:720px;padding:1.25rem 1rem 5rem}h1{color:#123757!important;font-size:clamp(1.65rem,7vw,2.2rem)!important;line-height:1.3!important}.lead{color:#64748b}
 div[data-testid="stForm"],div[data-testid="stExpander"]{border:1px solid #d7e2eb;border-radius:14px;padding:1rem;background:#fff;box-shadow:0 2px 7px #1237570a}
-div[data-testid="stFormSubmitButton"] button,div[data-testid="stButton"] button{min-height:56px;border-radius:10px;background:#1d6398;color:#fff;font-size:1.05rem;font-weight:700}
+div[data-testid="stFormSubmitButton"] button,div[data-testid="stButton"] button,div[data-testid="stDownloadButton"] button{min-height:56px;border-radius:10px;background:#1d6398;color:#fff;font-size:1.05rem;font-weight:700}
 div[data-testid="stMetric"]{background:#fff;border:1px solid #d7e2eb;border-radius:12px;padding:.65rem}div[data-testid="stDataFrame"]{background:#fff;border:1px solid #d7e2eb;border-radius:12px;overflow:hidden}
-@media(max-width:480px){.block-container{padding:1rem .85rem 5rem}div[data-testid="stFormSubmitButton"] button,div[data-testid="stButton"] button{min-height:60px;font-size:1.08rem}}
+@media(max-width:480px){.block-container{padding:1rem .85rem 5rem}div[data-testid="stFormSubmitButton"] button,div[data-testid="stButton"] button,div[data-testid="stDownloadButton"] button{min-height:60px;font-size:1.08rem}}
 </style>""", unsafe_allow_html=True)
 st.title("📝 建築工事日報")
 st.markdown("<p class='lead'>工事ごとに、職種別の出面と施工内容を全員で共有・累計する日報です。</p>", unsafe_allow_html=True)
@@ -162,6 +238,8 @@ if reports:
         summaries=" / ".join(f"{entry.get('labor_type')} {display_number(float(entry.get('count') or 0))}人" for entry in report.get("labor_entries") or [])
         rows.append({"日付":report["report_date"],"代理人名":report.get("agent_name",""),"出面":summaries,"本日合計":display_number(labor_total(report.get("labor_entries") or [])),"天候":report.get("weather","")})
     st.dataframe(rows, use_container_width=True, hide_index=True)
+    if existing_report:
+        st.download_button("📥 選択日の日報をExcel出力", data=report_xlsx(project["name"], existing_report), file_name=f"{project['name']}_{report_date}_工事日報.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
     if existing_report:
         with st.expander("選択日のこの日報を削除する"):
             confirm_delete=st.checkbox("削除内容を確認しました", key=f"delete_{context}")
