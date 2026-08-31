@@ -98,8 +98,8 @@ with t1:
         a,b=st.columns(2); mix=a.text_input("配合・呼び強度",placeholder="例：24-18-20N"); volume=b.number_input("予定数量 m³",0.0,step=.5)
         a,b=st.columns(2); people=a.text_input("人員・担当"); pump=b.text_input("ポンプ車・重機")
         weather=st.text_input("天候・気温予報"); checks=st.multiselect("事前確認",["配筋・型枠検査完了","打設順・打重ね計画","ポンプ車配置・動線","締固め機器・予備品","養生資材","試験・供試体採取"]); approval=st.selectbox("打設可否",["未判定","打設可","条件付き可","延期"]); memo=st.text_area("打設前メモ・注意事項")
-        save=st.form_submit_button("打設前チェックを保存",use_container_width=True)
-    if save:
+        submitted=st.form_submit_button("打設前チェックを保存",use_container_width=True)
+    if submitted:
         if not area: st.warning("打設区画を入力してください。")
         else: save("pre", {"date":str(day),"area":area,"mix":mix,"予定数量m3":volume,"人員":people,"ポンプ車":pump,"天候":weather,"事前確認":checks,"可否":approval,"メモ":memo,"保存":now()}); st.success("クラウドへ保存しました。"); st.rerun()
     st.dataframe([clean(x) for x in records["pre"][::-1]],use_container_width=True,hide_index=True)
@@ -111,8 +111,8 @@ with t2:
         with st.form("receipt",clear_on_submit=True):
             pick=st.selectbox("対象打設",list(options)); a,b,c=st.columns(3); arrival=a.time_input("到着時刻"); truck=b.text_input("車番"); ticket=c.text_input("伝票番号")
             a,b,c=st.columns(3); slump=a.number_input("スランプ cm",0.0,step=.5); air=b.number_input("空気量 %",0.0,step=.1); temp=c.number_input("コンクリート温度 ℃",0.0,step=.1)
-            a,b=st.columns(2); judge=a.selectbox("受入判定",["適合","条件付き受入","不適合・返却"]); sample=b.text_input("供試体・試験採取"); note=st.text_area("受入所見・対応"); save=st.form_submit_button("受入検査を保存",use_container_width=True)
-        if save:
+            a,b=st.columns(2); judge=a.selectbox("受入判定",["適合","条件付き受入","不適合・返却"]); sample=b.text_input("供試体・試験採取"); note=st.text_area("受入所見・対応"); submitted=st.form_submit_button("受入検査を保存",use_container_width=True)
+        if submitted:
             p=options[pick]; save("receipt", {"pour_id":p["id"],"date":p["date"],"area":p["area"],"到着":arrival.strftime("%H:%M"),"車番":truck,"伝票":ticket,"スランプcm":slump,"空気量%":air,"温度℃":temp,"判定":judge,"供試体":sample,"所見":note,"保存":now()}); st.success("クラウドへ保存しました。"); st.rerun()
     st.dataframe([clean(x) for x in records["receipt"][::-1]],use_container_width=True,hide_index=True)
 
@@ -122,8 +122,8 @@ with t3:
     else:
         with st.form("progress",clear_on_submit=True):
             pick=st.selectbox("対象打設",list(options),key="progress_pick"); a,b,c=st.columns(3); start=a.time_input("打設開始"); end=b.time_input("打設終了"); volume=c.number_input("今回数量 m³",0.0,step=.5)
-            a,b=st.columns(2); layer=a.text_input("打設位置・打重ね"); vibrator=b.text_input("締固め担当・方法"); total=st.number_input("累計数量 m³",0.0,step=.5); issue=st.text_area("進捗・品質・安全上の記録"); files=st.file_uploader("施工写真（複数可）",type=["jpg","jpeg","png"],accept_multiple_files=True); save=st.form_submit_button("打設中の記録を保存",use_container_width=True)
-        if save:
+            a,b=st.columns(2); layer=a.text_input("打設位置・打重ね"); vibrator=b.text_input("締固め担当・方法"); total=st.number_input("累計数量 m³",0.0,step=.5); issue=st.text_area("進捗・品質・安全上の記録"); files=st.file_uploader("施工写真（複数可）",type=["jpg","jpeg","png"],accept_multiple_files=True); submitted=st.form_submit_button("打設中の記録を保存",use_container_width=True)
+        if submitted:
             p=options[pick]; saved_photos=upload_photos(p["id"], files); save("progress", {"pour_id":p["id"],"date":p["date"],"area":p["area"],"開始":start.strftime("%H:%M"),"終了":end.strftime("%H:%M"),"今回数量m3":volume,"累計数量m3":total,"打重ね":layer,"締固め":vibrator,"記録":issue,"photos":saved_photos,"写真数":len(saved_photos),"保存":now()}); st.success("写真を含めクラウドへ保存しました。"); st.rerun()
     st.dataframe([clean(x) for x in records["progress"][::-1]],use_container_width=True,hide_index=True)
 
@@ -134,8 +134,8 @@ with t4:
         with st.form("curing",clear_on_submit=True):
             pick=st.selectbox("対象打設",list(options),key="curing_pick"); a,b=st.columns(2); begin_day=a.date_input("養生開始日",date.today()); begin_time=b.time_input("養生開始時刻",datetime.now().time().replace(second=0,microsecond=0)); a,b=st.columns(2); finish_day=a.date_input("養生終了予定日",date.today()); finish_time=b.time_input("養生終了予定時刻",datetime.now().time().replace(second=0,microsecond=0))
             a,b,c=st.columns(3); method=a.selectbox("養生方法",["散水","湿潤シート","被膜養生","保温養生","その他"]); temp=b.number_input("養生温度 ℃",0.0,step=.1); specimen=c.text_input("供試体番号")
-            a,b=st.columns(2); test=a.date_input("強度試験予定日",date.today()); strength=b.number_input("圧縮強度 N/mm²",0.0,step=.1); judge=st.selectbox("強度判定",["未試験","適合","要確認","不適合"]); memo=st.text_area("養生・試験メモ"); save=st.form_submit_button("養生・強度記録を保存",use_container_width=True)
-        if save:
+            a,b=st.columns(2); test=a.date_input("強度試験予定日",date.today()); strength=b.number_input("圧縮強度 N/mm²",0.0,step=.1); judge=st.selectbox("強度判定",["未試験","適合","要確認","不適合"]); memo=st.text_area("養生・試験メモ"); submitted=st.form_submit_button("養生・強度記録を保存",use_container_width=True)
+        if submitted:
             p=options[pick]; save("curing", {"pour_id":p["id"],"date":p["date"],"area":p["area"],"養生開始":f"{begin_day} {begin_time}","養生終了予定":f"{finish_day} {finish_time}","方法":method,"養生温度℃":temp,"供試体":specimen,"試験予定":str(test),"圧縮強度N/mm2":strength,"判定":judge,"メモ":memo,"保存":now()}); st.success("クラウドへ保存しました。"); st.rerun()
     st.dataframe([clean(x) for x in records["curing"][::-1]],use_container_width=True,hide_index=True)
 
