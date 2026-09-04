@@ -1,8 +1,9 @@
 """60秒日報（全員共通・工事別クラウド保存版）"""
 from __future__ import annotations
 import json
+import calendar
 from io import BytesIO
-from datetime import date, time
+from datetime import date, time, timedelta
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -30,6 +31,95 @@ def api(table, method="GET", params=None, body=None, prefer="return=representati
 
 def labor_total(entries): return sum(float(entry.get("count") or 0) for entry in entries)
 def display_number(value): return str(int(value)) if float(value).is_integer() else f"{value:.1f}"
+
+def work_calendar_html(period_start, period_end, report_dates):
+    """保存済み日報を作業日、未登録日を休工日（入力なし）として表示する。"""
+    report_date_set = {date.fromisoformat(item) for item in report_dates}
+    months = []
+    month_cursor = period_start.replace(day=1)
+    final_month = period_end.replace(day=1)
+    while month_cursor <= final_month:
+        weeks = calendar.Calendar(firstweekday=6).monthdatescalendar(month_cursor.year, month_cursor.month)
+        cells = []
+        for week in weeks:
+            for day in week:
+                if day.month != month_cursor.month:
+                    cells.append('<div class="calendar-day outside"></div>')
+                elif period_start <= day <= period_end:
+                    status = "work" if day in report_date_set else "rest"
+                    label = "作業" if status == "work" else "休工"
+                    cells.append(f'<div class="calendar-day {status}"><strong>{day.day}</strong><span>{label}</span></div>')
+                else:
+                    cells.append(f'<div class="calendar-day"><strong>{day.day}</strong></div>')
+        months.append(f'''<section class="work-calendar-month"><h4>{month_cursor.year}年{month_cursor.month}月</h4><div class="calendar-weekdays"><span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span></div><div class="calendar-grid">{''.join(cells)}</div></section>''')
+        month_cursor = (month_cursor.replace(day=28) + timedelta(days=4)).replace(day=1)
+    return '<div class="calendar-legend"><span class="work-dot">● 作業日（日報あり）</span><span class="rest-dot">● 休工日（入力なし）</span></div><div class="work-calendar">' + ''.join(months) + '</div>'
+
+def period_xlsx(project_name, period_reports, period_start, period_end):
+    """指定期間の日報一覧と職種別・全体出面集計を1つのExcelにまとめる。"""
+    output = BytesIO()
+    sorted_reports = sorted(period_reports, key=lambda item: item["report_date"])
+    labor_totals = {}
+    for report in sorted_reports:
+        for entry in report.get("labor_entries") or []:
+            labor_type = entry.get("labor_type", "未分類")
+            labor_totals[labor_type] = labor_totals.get(labor_type, 0) + float(entry.get("count") or 0)
+    with xlsxwriter.Workbook(output, {"in_memory": True}) as workbook:
+        navy, blue, pale_blue, border = "#123757", "#1D6398", "#E7F1F8", "#D7E2EB"
+        title = workbook.add_format({"bold": True, "font_size": 18, "font_color": "#FFFFFF", "bg_color": navy, "align": "center", "valign": "vcenter"})
+        label = workbook.add_format({"bold": True, "font_color": navy, "bg_color": pale_blue, "border": 1, "border_color": border, "align": "center", "valign": "vcenter"})
+        text = workbook.add_format({"border": 1, "border_color": border, "valign": "top", "text_wrap": True})
+        number = workbook.add_format({"border": 1, "border_color": border, "align": "right", "valign": "top", "num_format": "0.0"})
+        total = workbook.add_format({"bold": True, "font_color": navy, "bg_color": "#DDEBF7", "border": 1, "border_color": border, "align": "right", "num_format": "0.0"})
+        section = workbook.add_format({"bold": True, "font_color": "#FFFFFF", "bg_color": blue, "valign": "vcenter"})
+
+        summary = workbook.add_worksheet("期間集計")
+        summary.hide_gridlines(2)
+        summary.set_column("A:A", 18); summary.set_column("B:B", 22); summary.set_column("C:C", 18); summary.set_column("D:D", 18)
+        summary.merge_range("A1:D1", "建築工事日報・期間集計", title); summary.set_row(0, 31)
+        summary.write("A3", "工事名", label); summary.merge_range("B3:D3", project_name, text)
+        summary.write("A4", "出力期間", label); summary.merge_range("B4:D4", f"{period_start} ～ {period_end}", text)
+        summary.write("A5", "作業日数", label); summary.write_number("B5", len(sorted_reports), total)
+        summary.write("C5", "全体出面累計", label); summary.write_number("D5", sum(labor_totals.values()), total)
+        summary.merge_range("A7:D7", "職種別累積出面", section)
+        summary.write_row("A8", ["No.", "職種", "累積出面（人）", ""], label)
+        for index, (labor_type, count) in enumerate(sorted(labor_totals.items()), start=1):
+            row = 7 + index
+            summary.write_number(row, 0, index, text)
+            summary.write(row, 1, labor_type, text)
+            summary.write_number(row, 2, count, number)
+            summary.write(row, 3, "", text)
+        total_row = 8 + len(labor_totals)
+        summary.merge_range(total_row, 0, total_row, 1, "全体累積出面", total)
+        summary.write_number(total_row, 2, sum(labor_totals.values()), total)
+        summary.write(total_row, 3, "", total)
+
+        details = workbook.add_worksheet("日報一覧")
+        details.hide_gridlines(2)
+        details.set_column("A:A", 13); details.set_column("B:B", 14); details.set_column("C:C", 12); details.set_column("D:D", 12); details.set_column("E:E", 12); details.set_column("F:F", 16); details.set_column("G:G", 12); details.set_column("H:H", 46)
+        details.merge_range("A1:H1", "指定期間の日報一覧", title); details.set_row(0, 31)
+        details.merge_range("A3:H3", f"{project_name}　／　{period_start} ～ {period_end}", text)
+        details.write_row("A5", ["日付", "代理人名", "天候", "開始", "終了", "職種", "出面（人）", "施工内容"], label)
+        row = 5
+        for report in sorted_reports:
+            entries = report.get("labor_entries") or [{}]
+            for entry in entries:
+                details.write(row, 0, report["report_date"], text)
+                details.write(row, 1, report.get("agent_name", ""), text)
+                details.write(row, 2, report.get("weather", ""), text)
+                details.write(row, 3, (report.get("work_start") or "")[:5], text)
+                details.write(row, 4, (report.get("work_end") or "")[:5], text)
+                details.write(row, 5, entry.get("labor_type", ""), text)
+                details.write_number(row, 6, float(entry.get("count") or 0), number)
+                details.write(row, 7, entry.get("content", ""), text)
+                details.set_row(row, 30)
+                row += 1
+        details.autofilter(4, 0, max(4, row - 1), 7)
+        for sheet in (summary, details):
+            sheet.set_landscape(); sheet.fit_to_pages(1, 0)
+            sheet.set_margins(left=0.3, right=0.3, top=0.45, bottom=0.45)
+            sheet.set_footer("&RPage &P / &N")
+    return output.getvalue()
 
 def report_xlsx(project_name, report, cumulative_reports=None):
     """選択日の日報を出力し、指定時のみ選択日までの累計も併記する。"""
@@ -136,6 +226,7 @@ st.markdown("""<style>
 div[data-testid="stForm"],div[data-testid="stExpander"]{border:1px solid #d7e2eb;border-radius:14px;padding:1rem;background:#fff;box-shadow:0 2px 7px #1237570a}
 div[data-testid="stFormSubmitButton"] button,div[data-testid="stButton"] button,div[data-testid="stDownloadButton"] button{min-height:56px;border-radius:10px;background:#1d6398;color:#fff;font-size:1.05rem;font-weight:700}
 div[data-testid="stMetric"]{background:#fff;border:1px solid #d7e2eb;border-radius:12px;padding:.65rem}div[data-testid="stDataFrame"]{background:#fff;border:1px solid #d7e2eb;border-radius:12px;overflow:hidden}
+.calendar-legend{display:flex;gap:1rem;flex-wrap:wrap;font-size:.9rem;margin:.5rem 0}.work-dot{color:#177245}.rest-dot{color:#9a5b00}.work-calendar{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:1rem}.work-calendar-month{border:1px solid #d7e2eb;border-radius:10px;padding:.65rem;background:#fff}.work-calendar-month h4{text-align:center;margin:0 0 .45rem;color:#123757}.calendar-weekdays,.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}.calendar-weekdays span{text-align:center;font-size:.72rem;color:#64748b}.calendar-day{min-height:39px;border-radius:5px;padding:3px;text-align:center;font-size:.75rem;background:#f8fafc}.calendar-day strong,.calendar-day span{display:block}.calendar-day span{font-size:.62rem}.calendar-day.work{background:#dcfce7;color:#166534}.calendar-day.rest{background:#ffedd5;color:#9a3412}.calendar-day.outside{background:transparent}
 @media(max-width:480px){.block-container{padding:1rem .85rem 5rem}div[data-testid="stFormSubmitButton"] button,div[data-testid="stButton"] button,div[data-testid="stDownloadButton"] button{min-height:60px;font-size:1.08rem}}
 </style>""", unsafe_allow_html=True)
 st.title("📝 建築工事日報")
@@ -264,6 +355,36 @@ if reports:
         summaries=" / ".join(f"{entry.get('labor_type')} {display_number(float(entry.get('count') or 0))}人" for entry in report.get("labor_entries") or [])
         rows.append({"日付":report["report_date"],"代理人名":report.get("agent_name",""),"出面":summaries,"本日合計":display_number(labor_total(report.get("labor_entries") or [])),"天候":report.get("weather","")})
     st.dataframe(rows, use_container_width=True, hide_index=True)
+    st.divider()
+    st.subheader("📅 期間を指定してExcel出力")
+    first_report_date = date.fromisoformat(min(item["report_date"] for item in reports))
+    default_period_end = max(report_date, first_report_date)
+    selected_period = st.date_input(
+        "出力期間（開始日・終了日）",
+        value=(first_report_date, default_period_end),
+        min_value=first_report_date,
+        help="カレンダーから開始日と終了日を選んでください。",
+    )
+    if len(selected_period) == 2:
+        period_start, period_end = selected_period
+        if period_start > period_end:
+            st.error("開始日は終了日以前にしてください。")
+        else:
+            period_reports = [item for item in reports if str(period_start) <= item["report_date"] <= str(period_end)]
+            st.markdown(work_calendar_html(period_start, period_end, [item["report_date"] for item in reports]), unsafe_allow_html=True)
+            st.caption("緑：作業日（日報あり）／橙：休工日（日報の入力なし）")
+            if period_reports:
+                st.download_button(
+                    "📥 指定期間の日報・累積をExcel出力",
+                    data=period_xlsx(project["name"], period_reports, period_start, period_end),
+                    file_name=f"{project['name']}_{period_start}～{period_end}_日報・累積.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True,
+                )
+            else:
+                st.info("指定期間に保存済みの日報はありません。")
+    else:
+        st.info("開始日と終了日を選択してください。")
     if existing_report:
         include_cumulative = st.checkbox(
             "累積表示を含めてExcel出力する",
