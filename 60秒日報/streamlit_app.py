@@ -31,8 +31,9 @@ def api(table, method="GET", params=None, body=None, prefer="return=representati
 def labor_total(entries): return sum(float(entry.get("count") or 0) for entry in entries)
 def display_number(value): return str(int(value)) if float(value).is_integer() else f"{value:.1f}"
 
-def report_xlsx(project_name, report):
-    """画面で選択している1日分の日報を、そのまま提出用のExcel帳票にする。"""
+def report_xlsx(project_name, report, cumulative_reports=None):
+    """選択日の日報を出力し、指定時のみ選択日までの累計も併記する。"""
+    is_cumulative = cumulative_reports is not None
     output = BytesIO()
     with xlsxwriter.Workbook(output, {"in_memory": True}) as workbook:
         sheet = workbook.add_worksheet("工事日報")
@@ -60,7 +61,7 @@ def report_xlsx(project_name, report):
         total_label = workbook.add_format({"bold": True, "font_color": navy, "bg_color": "#DDEBF7", "border": 1, "border_color": border, "align": "right"})
         total_value = workbook.add_format({"bold": True, "font_color": navy, "bg_color": "#DDEBF7", "border": 1, "border_color": border, "align": "right", "num_format": "0.0"})
 
-        sheet.merge_range("A1:E1", "建築工事日報", title)
+        sheet.merge_range("A1:E1", "建築工事日報・累計出面" if is_cumulative else "建築工事日報", title)
         sheet.set_row(0, 31)
         sheet.write("A3", "工事名", label)
         sheet.merge_range("B3:E3", project_name, value)
@@ -90,15 +91,40 @@ def report_xlsx(project_name, report):
         sheet.write_formula(total_row, 2, f"=SUM(C10:C{total_row})", total_value, labor_total(entries))
         sheet.merge_range(total_row, 3, total_row, 4, "", total_value)
 
-        concern_row = total_row + 3
-        sheet.merge_range(concern_row, 0, concern_row, 4, "気になったこと・違和感", section)
-        sheet.write(concern_row + 1, 0, "記入内容", note_label)
-        sheet.merge_range(concern_row + 1, 1, concern_row + 2, 4, report.get("concern", ""), note_value)
-        sheet.set_row(concern_row + 1, 34)
-        sheet.merge_range(concern_row + 4, 0, concern_row + 4, 4, "明日の予定・引継ぎ", section)
-        sheet.write(concern_row + 5, 0, "記入内容", note_label)
-        sheet.merge_range(concern_row + 5, 1, concern_row + 6, 4, report.get("tomorrow", ""), note_value)
-        sheet.set_row(concern_row + 5, 34)
+        if is_cumulative:
+            sorted_reports = sorted(cumulative_reports, key=lambda item: item["report_date"])
+            labor_totals = {}
+            for cumulative_report in sorted_reports:
+                for entry in cumulative_report.get("labor_entries") or []:
+                    labor_type = entry.get("labor_type", "未分類")
+                    labor_totals[labor_type] = labor_totals.get(labor_type, 0) + float(entry.get("count") or 0)
+
+            cumulative_row = total_row + 3
+            period_start = sorted_reports[0]["report_date"] if sorted_reports else report["report_date"]
+            sheet.merge_range(cumulative_row, 0, cumulative_row, 4, "選択日までの累積出面", section)
+            sheet.write(cumulative_row + 1, 0, "集計期間", label)
+            sheet.merge_range(cumulative_row + 1, 1, cumulative_row + 1, 4, f"{period_start} ～ {report['report_date']}", value_center)
+            sheet.write_row(cumulative_row + 3, 0, ["No.", "職種", "累積出面（人）", "", ""], table_header)
+            for index, (labor_type, total) in enumerate(sorted(labor_totals.items()), start=1):
+                row = cumulative_row + 3 + index
+                sheet.write_number(row, 0, index, table_text)
+                sheet.write(row, 1, labor_type, table_text)
+                sheet.write_number(row, 2, total, table_number)
+                sheet.merge_range(row, 3, row, 4, "", table_text)
+            cumulative_total_row = cumulative_row + 4 + len(labor_totals)
+            sheet.merge_range(cumulative_total_row, 0, cumulative_total_row, 1, "全体累積出面", total_label)
+            sheet.write_number(cumulative_total_row, 2, sum(labor_totals.values()), total_value)
+            sheet.merge_range(cumulative_total_row, 3, cumulative_total_row, 4, "", total_value)
+        else:
+            concern_row = total_row + 3
+            sheet.merge_range(concern_row, 0, concern_row, 4, "気になったこと・違和感", section)
+            sheet.write(concern_row + 1, 0, "記入内容", note_label)
+            sheet.merge_range(concern_row + 1, 1, concern_row + 2, 4, report.get("concern", ""), note_value)
+            sheet.set_row(concern_row + 1, 34)
+            sheet.merge_range(concern_row + 4, 0, concern_row + 4, 4, "明日の予定・引継ぎ", section)
+            sheet.write(concern_row + 5, 0, "記入内容", note_label)
+            sheet.merge_range(concern_row + 5, 1, concern_row + 6, 4, report.get("tomorrow", ""), note_value)
+            sheet.set_row(concern_row + 5, 34)
         sheet.set_landscape()
         sheet.fit_to_pages(1, 1)
         sheet.set_margins(left=0.3, right=0.3, top=0.45, bottom=0.45)
@@ -239,7 +265,20 @@ if reports:
         rows.append({"日付":report["report_date"],"代理人名":report.get("agent_name",""),"出面":summaries,"本日合計":display_number(labor_total(report.get("labor_entries") or [])),"天候":report.get("weather","")})
     st.dataframe(rows, use_container_width=True, hide_index=True)
     if existing_report:
-        st.download_button("📥 選択日の日報をExcel出力", data=report_xlsx(project["name"], existing_report), file_name=f"{project['name']}_{report_date}_工事日報.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+        include_cumulative = st.checkbox(
+            "累積表示を含めてExcel出力する",
+            help="選択日の日報に加え、工事開始日から選択日までの職種別・全体累積出面を出力します。",
+        )
+        cumulative_reports = [item for item in reports if item["report_date"] <= str(report_date)] if include_cumulative else None
+        output_label = "📥 選択日の日報・累積をExcel出力" if include_cumulative else "📥 選択日の日報をExcel出力"
+        output_suffix = "日報・累積" if include_cumulative else "工事日報"
+        st.download_button(
+            output_label,
+            data=report_xlsx(project["name"], existing_report, cumulative_reports),
+            file_name=f"{project['name']}_{report_date}_{output_suffix}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+        )
     if existing_report:
         with st.expander("選択日のこの日報を削除する"):
             confirm_delete=st.checkbox("削除内容を確認しました", key=f"delete_{context}")
@@ -248,4 +287,5 @@ if reports:
                 except RuntimeError as error: st.error(str(error))
 else: st.info("この工事の日報はまだありません。")
 st.caption("参考Excelの職種を初期設定しています。職種設定は工事ごとに編集でき、出面・施工内容・代理人名・作業時間は工事別にクラウド保存されます。")
+
 
