@@ -13,7 +13,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 
 st.set_page_config(page_title="コンクリート打設管理", page_icon="🚚", layout="centered")
 st.markdown("<style>.block-container{max-width:820px;padding:1rem 1rem 4rem}div.stButton>button,div[data-testid='stFormSubmitButton'] button{min-height:52px;font-weight:700}.stage{padding:.55rem .75rem;border-radius:.6rem;background:#eef5fa;color:#123757;font-weight:700}</style>", unsafe_allow_html=True)
-for key, default in {"active_cast_site": ""}.items(): st.session_state.setdefault(key, default)
+for key, default in {"active_cast_site": "", "delete_record_id": ""}.items(): st.session_state.setdefault(key, default)
 
 def now(): return datetime.now().strftime("%Y-%m-%d %H:%M")
 @st.cache_resource
@@ -38,6 +38,12 @@ def data():
 def save(stage, payload):
     require_cloud().table("concrete_records").insert({"site_id":st.session_state.active_cast_site,"stage":stage,"payload":payload}).execute()
 
+def update_record(record_id, payload):
+    require_cloud().table("concrete_records").update({"payload":payload}).eq("id",record_id).eq("site_id",st.session_state.active_cast_site).execute()
+
+def delete_record(record_id):
+    require_cloud().table("concrete_records").delete().eq("id",record_id).eq("site_id",st.session_state.active_cast_site).execute()
+
 def upload_photos(pour_id, files):
     client=require_cloud(); saved=[]
     for file in files:
@@ -48,6 +54,51 @@ def upload_photos(pour_id, files):
     return saved
 def pours(records): return {f"{x['date']}｜{x['area']}｜{x['id'][:6]}": x for x in records["pre"]}
 def clean(row): return {k: (" / ".join(v) if isinstance(v, list) else v) for k, v in row.items() if k not in {"id", "pour_id", "photos"}}
+def editable(row): return {k: (" / ".join(v) if isinstance(v, list) else v) for k, v in row.items() if k not in {"id", "pour_id", "photos", "saved_at"}}
+def revised_payload(row, values):
+    payload={k:v for k,v in row.items() if k not in {"id", "saved_at"}}
+    for key, value in values.items():
+        if isinstance(payload.get(key), list) and isinstance(value, str):
+            payload[key]=[part.strip() for part in value.split("/") if part.strip()]
+        else: payload[key]=value
+    return payload
+def record_manager(stage, entries, records):
+    labels={"pre":"打設前", "receipt":"受入検査", "progress":"打設中", "curing":"養生・強度"}
+    if not entries:
+        st.info("編集・削除できる記録はありません。")
+        return
+    st.caption("セルをクリックして内容を変更し、「変更を保存」を押してください。写真は編集時も保持されます。")
+    for row in entries:
+        record_id=row["id"]
+        title=f"{row.get('date','日付未入力')}｜{row.get('area','区画未入力')}｜{labels[stage]}"
+        with st.expander(title):
+            edited=st.data_editor([editable(row)], hide_index=True, num_rows="fixed", use_container_width=True, key=f"editor_{record_id}")
+            save_col, delete_col=st.columns(2)
+            if save_col.button("変更を保存", key=f"save_{record_id}", use_container_width=True):
+                update_record(record_id, revised_payload(row, edited.iloc[0].to_dict()))
+                st.success("変更を保存しました。")
+                st.rerun()
+            if st.session_state.delete_record_id == record_id:
+                linked=sum(1 for item in records["receipt"]+records["progress"]+records["curing"] if item.get("pour_id") == record_id)
+                if stage == "pre" and linked:
+                    st.error(f"この打設前記録には関連記録が {linked} 件あります。先に関連する受入・打設中・養生記録を削除してください。")
+                    if st.button("削除を取り消す", key=f"cancel_{record_id}", use_container_width=True):
+                        st.session_state.delete_record_id=""
+                        st.rerun()
+                else:
+                    st.warning("この記録を削除します。元に戻せません。")
+                    confirm, cancel=st.columns(2)
+                    if confirm.button("削除を確定", key=f"confirm_{record_id}", type="primary", use_container_width=True):
+                        delete_record(record_id)
+                        st.session_state.delete_record_id=""
+                        st.success("記録を削除しました。")
+                        st.rerun()
+                    if cancel.button("取り消す", key=f"cancel_{record_id}", use_container_width=True):
+                        st.session_state.delete_record_id=""
+                        st.rerun()
+            elif delete_col.button("削除", key=f"delete_{record_id}", use_container_width=True):
+                st.session_state.delete_record_id=record_id
+                st.rerun()
 def report_rows(records): return [{"段階": stage, **clean(row)} for stage, entries in records.items() for row in entries]
 def csv_bytes(records):
     rows=report_rows(records); fields=sorted({k for r in rows for k in r}|{"段階"}); out=io.StringIO(); w=csv.DictWriter(out,fieldnames=fields); w.writeheader(); w.writerows(rows); return ("\ufeff"+out.getvalue()).encode()
@@ -89,7 +140,7 @@ if not st.session_state.active_cast_site:
 client=require_cloud(); site=client.table("concrete_sites").select("name").eq("id",st.session_state.active_cast_site).single().execute().data["name"]; records=data()
 c1,c2=st.columns([4,1]); c1.markdown(f"### 現場：{site}")
 if c2.button("現場を切替",use_container_width=True): st.session_state.active_cast_site=""; st.rerun()
-t1,t2,t3,t4,t5=st.tabs(["1. 打設前","2. 受入","3. 打設中","4. 養生・強度","5. 帳票"])
+t1,t2,t3,t4,t5,t6=st.tabs(["1. 打設前","2. 受入","3. 打設中","4. 養生・強度","5. 帳票","6. 編集・削除"])
 
 with t1:
     st.markdown('<p class="stage">打設前チェック</p>',unsafe_allow_html=True)
@@ -149,4 +200,9 @@ with t5:
     st.download_button("CSV帳票をダウンロード",csv_bytes(records),f"{site}_コンクリート打設管理.csv","text/csv",use_container_width=True)
     st.download_button("PDF帳票をダウンロード",pdf_bytes(site,records),f"{site}_コンクリート打設管理.pdf","application/pdf",use_container_width=True)
     st.caption("現在選択している現場の記録だけを出力します。写真は画面で確認でき、帳票には写真の登録枚数を記録します。")
+
+with t6:
+    st.markdown('<p class="stage">登録済み記録の編集・削除</p>',unsafe_allow_html=True)
+    stage=st.selectbox("記録の種類", ["pre", "receipt", "progress", "curing"], format_func=lambda x:{"pre":"打設前", "receipt":"受入検査", "progress":"打設中", "curing":"養生・強度"}[x])
+    record_manager(stage, records[stage], records)
 
