@@ -78,7 +78,7 @@ app_link("📌 未対応事項", "https://hokama-issue-management.streamlit.app/
 
 st.divider()
 st.header("🔍 品質・検査")
-app_link("📚 公共建築工事標準仕様書検索", "https://hokama-spec-search.streamlit.app/")
+app_link("📚 公共建築工事標準仕様書検索", "https://construction-spec-search.kodaionaga.chatgpt.site")
 app_link("📄 各種検査書類", "https://hokama-self-inspection.streamlit.app/")
 app_link("🧱 施工確認アプリ", "https://hokama-construction-check.streamlit.app/")
 app_link("🛠️ 是正事項", "https://hokama-corrective-actions.streamlit.app/")
