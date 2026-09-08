@@ -2,7 +2,7 @@ import streamlit as st
 
 
 st.set_page_config(
-    page_title="株式会社ホカマ 建築部施工管理ポータルサイト",
+    page_title="建築施工管理ポータルサイト",
     page_icon="🏗️",
     layout="centered",
     initial_sidebar_state="collapsed",
@@ -59,7 +59,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("🏗️ 株式会社ホカマ\n建築部施工管理ポータルサイト")
+st.title("🏗️ 建築施工管理ポータルサイト")
 st.caption("現場で使うアプリを、下の大きなボタンから開けます。")
 
 
