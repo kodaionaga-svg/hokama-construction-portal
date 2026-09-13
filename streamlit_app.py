@@ -106,3 +106,5 @@ app_link("📏 測量計算ツール", "https://onaga-ts-sokuryou.streamlit.app/
 
 st.divider()
 st.caption("※ 各ボタンのURLは、公開済みアプリのURLへ書き換えてご利用ください。")
+
+# Re-publish portal to refresh the safety patrol link.
