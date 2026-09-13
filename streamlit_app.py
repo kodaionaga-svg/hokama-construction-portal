@@ -108,3 +108,9 @@ st.divider()
 st.caption("※ 各ボタンのURLは、公開済みアプリのURLへ書き換えてご利用ください。")
 
 # Re-publish portal to refresh the safety patrol link.
+
+
+st.divider()
+st.header("🦺 安全パトロール")
+st.caption("下のボタンから安全パトロールを直接開けます。")
+st.link_button("🦺 安全パトロールを開く", "https://onaga-safety-patrol.streamlit.app/?from=portal", use_container_width=True)
