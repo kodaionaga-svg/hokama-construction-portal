@@ -101,8 +101,7 @@ app_link("🛠️ 是正事項", "https://hokama-corrective-actions.streamlit.ap
 
 st.divider()
 st.header("🛠️ 施工管理支援ツール")
-app_link("📏 測量計算ツール", "https://kodaionaga-svg.github.io/hokama-ts-sokuryou/")
-app_link("💾 測量計算ツール（端末保存版）", "https://github.com/kodaionaga-svg/hokama-ts-sokuryou/raw/main/ts_sokuryou_local.html")
+app_link("📏 測量計算ツール", "https://hokama-ts-sokuryou.streamlit.app/")
 
 st.divider()
 st.caption("※ 各ボタンのURLは、公開済みアプリのURLへ書き換えてご利用ください。")
