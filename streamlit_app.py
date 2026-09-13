@@ -1,28 +1,11 @@
 import streamlit as st
-from streamlit.components.v2 import component
-
-cloudflare_web_analytics = component(
-    "cloudflare_web_analytics",
-    js="""export default function() {
-        if (document.querySelector('script[data-cf-analytics-token="b9aa05f3b763493dbc50ab8b373f3cd4"]')) return;
-        const script = document.createElement("script");
-        script.type = "module";
-        script.src = "https://static.cloudflareinsights.com/beacon.min.js";
-        script.dataset.cfBeacon = JSON.stringify({ token: "b9aa05f3b763493dbc50ab8b373f3cd4" });
-        script.dataset.cfAnalyticsToken = "b9aa05f3b763493dbc50ab8b373f3cd4";
-        document.head.appendChild(script);
-    }""",
-)
-cloudflare_web_analytics()
-
-
-
 st.set_page_config(
     page_title="建築施工管理ポータルサイト",
     page_icon="🏗️",
     layout="centered",
     initial_sidebar_state="collapsed",
 )
+
 
 st.markdown(
     """
@@ -75,8 +58,11 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+
 st.title("🏗️ 建築施工管理ポータルサイト")
 st.caption("現場で使うアプリを、下の大きなボタンから開けます。")
+
+
 
 
 def app_link(label: str, url: str = "https://example.com") -> None:
@@ -84,33 +70,19 @@ def app_link(label: str, url: str = "https://example.com") -> None:
     st.link_button(label, url, use_container_width=True)
 
 
+
+
 st.divider()
 st.header("💬 コミュニケーション")
 app_link("⚠️ KY・安全管理", "https://onaga-ky-safety.streamlit.app/")
-app_link("🦺 安全パトロール", "https://onaga-safety-patrol.streamlit.app/")
+app_link("🦺 安全パトロール", "https://onaga-safety-patrol-v2.streamlit.app/")
 app_link("📢 お知らせ・連絡掲示板", "https://onaga-notice-board.streamlit.app/")
 app_link("📅 工程・予定共有", "https://onaga-schedule-share.streamlit.app/")
 app_link("📝 工事日報・作業報告", "https://onaga-60sec-daily-report.streamlit.app/")
 app_link("📌 未対応事項", "https://onaga-issue-management.streamlit.app/")
 
+
 st.divider()
 st.header("🔍 品質・検査")
 app_link("📚 公共建築工事標準仕様書検索", "https://construction-spec-search.kodaionaga.chatgpt.site")
 app_link("📄 各種検査書類", "https://onaga-self-inspection.streamlit.app/")
-app_link("🧱 コンクリート打設管理", "https://onaga-construction-check.streamlit.app/")
-app_link("🛠️ 是正事項", "https://onaga-corrective-actions.streamlit.app/")
-
-st.divider()
-st.header("🛠️ 施工管理支援ツール")
-app_link("📏 測量計算ツール", "https://onaga-ts-sokuryou.streamlit.app/")
-
-st.divider()
-st.caption("※ 各ボタンのURLは、公開済みアプリのURLへ書き換えてご利用ください。")
-
-# Re-publish portal to refresh the safety patrol link.
-
-
-st.divider()
-st.header("🦺 安全パトロール")
-st.caption("下のボタンから安全パトロールを直接開けます。")
-st.link_button("🦺 安全パトロールを開く", "https://onaga-safety-patrol.streamlit.app/?from=portal", use_container_width=True)
