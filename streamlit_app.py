@@ -1,4 +1,12 @@
 import streamlit as st
+from streamlit.components.v2 import component
+
+cloudflare_web_analytics = component(
+    "cloudflare_web_analytics",
+    html="""<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "b9aa05f3b763493dbc50ab8b373f3cd4"}'></script>""",
+)
+cloudflare_web_analytics()
+
 
 
 st.set_page_config(
