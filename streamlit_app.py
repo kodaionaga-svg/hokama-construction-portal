@@ -3,7 +3,15 @@ from streamlit.components.v2 import component
 
 cloudflare_web_analytics = component(
     "cloudflare_web_analytics",
-    html="""<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "b9aa05f3b763493dbc50ab8b373f3cd4"}'></script>""",
+    js="""export default function() {
+        if (document.querySelector('script[data-cf-analytics-token="b9aa05f3b763493dbc50ab8b373f3cd4"]')) return;
+        const script = document.createElement("script");
+        script.type = "module";
+        script.src = "https://static.cloudflareinsights.com/beacon.min.js";
+        script.dataset.cfBeacon = JSON.stringify({ token: "b9aa05f3b763493dbc50ab8b373f3cd4" });
+        script.dataset.cfAnalyticsToken = "b9aa05f3b763493dbc50ab8b373f3cd4";
+        document.head.appendChild(script);
+    }""",
 )
 cloudflare_web_analytics()
 
