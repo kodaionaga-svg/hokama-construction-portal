@@ -72,8 +72,12 @@ app_link("📢 お知らせ・連絡掲示板", "https://onaga-notice-board.stre
 app_link("📅 工程・予定共有", "https://onaga-schedule-share.streamlit.app/")
 app_link("📝 工事日報・作業報告", "https://onaga-60sec-daily-report.streamlit.app/")
 app_link("📌 未対応事項", "https://onaga-issue-management.streamlit.app/")
+app_link("🛠️ 是正管理", "https://onaga-corrective-actions.streamlit.app/")
+app_link("🏗️ 現場管理・品質管理", "https://onaga-construction-check.streamlit.app/")
 
 st.divider()
 st.header("🔍 品質・検査")
 app_link("📚 公共建築工事標準仕様書検索", "https://construction-spec-search.kodaionaga.chatgpt.site")
 app_link("📄 各種検査書類", "https://onaga-self-inspection.streamlit.app/")
+app_link("📐 TS測量", "https://onaga-ts-sokuryou.streamlit.app/")
+app_link("📖 建築仕様書検索", "https://onaga-spec-search.streamlit.app/")
