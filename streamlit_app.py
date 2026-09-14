@@ -6,7 +6,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-
 st.markdown(
     """
     <style>
@@ -58,29 +57,21 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-
 st.title("🏗️ 建築施工管理ポータルサイト")
 st.caption("現場で使うアプリを、下の大きなボタンから開けます。")
-
-
-
 
 def app_link(label: str, url: str = "https://example.com") -> None:
     """公開済みの各アプリURLを指定してください。"""
     st.link_button(label, url, use_container_width=True)
 
-
-
-
 st.divider()
 st.header("💬 コミュニケーション")
 app_link("⚠️ KY・安全管理", "https://onaga-ky-safety.streamlit.app/")
-app_link("🦺 安全パトロール", "https://onaga-safety-patrol-v2.streamlit.app/")
+app_link("🦺 安全パトロール", "https://hokama-safety-patrol.kodaionaga.chatgpt.site")
 app_link("📢 お知らせ・連絡掲示板", "https://onaga-notice-board.streamlit.app/")
 app_link("📅 工程・予定共有", "https://onaga-schedule-share.streamlit.app/")
 app_link("📝 工事日報・作業報告", "https://onaga-60sec-daily-report.streamlit.app/")
 app_link("📌 未対応事項", "https://onaga-issue-management.streamlit.app/")
-
 
 st.divider()
 st.header("🔍 品質・検査")
